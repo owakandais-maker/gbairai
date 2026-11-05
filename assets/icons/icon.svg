@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="GBAIRAI TRAVAIL">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#ffffff" d="M330 196c-14-25-41-41-74-41-49 0-86 38-86 101s36 101 88 101c30 0 55-13 68-33v-45h-66v-44h114v98c-24 42-68 68-118 68-78 0-134-57-134-145S178 111 256 111c50 0 93 24 117 63z"/>
+</svg>

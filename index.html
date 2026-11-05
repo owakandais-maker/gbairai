@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GBAIRAI TRAVAIL — Le futur de l'emploi</title>
+
+<meta name="description" content="GBAIRAI TRAVAIL : la plateforme de recrutement par pitch vidéo. Matching IA, portefeuille Taro, studio live et assistant vocal multilingue.">
+<meta name="theme-color" content="#f6f7fb">
+<meta name="color-scheme" content="light dark">
+<meta name="application-name" content="GBAIRAI TRAVAIL">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GBAIRAI">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="GBAIRAI TRAVAIL">
+<meta property="og:title" content="GBAIRAI TRAVAIL — Le futur de l'emploi">
+<meta property="og:description" content="Trouvez le job qui matche votre vibe. Pitch vidéo, matching IA et assistant vocal en 7 langues.">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./assets/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
+
+<!-- Fonts: preconnect then load without blocking first paint -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+
+<!-- Icons are inline SVG (assets/js/icons.js) — no icon-font CDN. -->
+
+<link rel="stylesheet" href="./assets/css/app.css">
+
+<script>
+  /* Set the theme before first paint so there is no light flash in dark mode. */
+  (function () {
+    try {
+      var pref = JSON.parse(localStorage.getItem('gbairai.v2.theme') || '"system"');
+      var dark = pref === 'dark' ||
+        (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      var tc = document.querySelector('meta[name="theme-color"]');
+      if (tc) tc.setAttribute('content', dark ? '#070b16' : '#f6f7fb');
+      var loc = JSON.parse(localStorage.getItem('gbairai.v2.locale') || 'null');
+      if (loc) {
+        document.documentElement.lang = loc;
+        document.documentElement.dir = loc === 'ar' ? 'rtl' : 'ltr';
+      }
+    } catch (e) { /* storage unavailable — defaults apply */ }
+  })();
+</script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main" data-i18n="nav.skip">Aller au contenu principal</a>
+
+  <!-- Nav, tab bar, dock and dock panels are built by app.js -->
+
+  <main id="main" class="main" tabindex="-1">
+    <div class="shell">
+      <div class="stack gap-6" style="padding-block:40px">
+        <div class="skeleton" style="height:42px;width:min(420px,80%)"></div>
+        <div class="skeleton" style="height:22px;width:min(560px,92%)"></div>
+        <div class="grid grid-cards">
+          <div class="skeleton" style="height:320px"></div>
+          <div class="skeleton" style="height:320px"></div>
+          <div class="skeleton" style="height:320px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <noscript>
+    <div style="max-width:620px;margin:120px auto;padding:28px;text-align:center">
+      <h1 style="font-size:1.4rem;margin-bottom:12px">JavaScript requis</h1>
+      <p style="color:#5b6477">
+        GBAIRAI TRAVAIL est une application interactive : activez JavaScript pour
+        parcourir les offres, les profils vidéo et le studio live.
+      </p>
+    </div>
+  </noscript>
+
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>
