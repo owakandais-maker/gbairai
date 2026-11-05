@@ -3,7 +3,7 @@
  * PWA install, and the action bus every view calls into.
  */
 
-import { h, icon, render, $, $$, observeReveals, debounce } from './dom.js';
+import { h, icon, render, $, $$, observeReveals, debounce, paintImageFallback } from './dom.js';
 import { t, localise, setLocale, detectLocale, getLocale, meta, LOCALES, num } from './i18n.js';
 import * as store from './store.js';
 import { toast, modal, drawer, videoModal, commandPalette, popover, closeAllLayers } from './ui.js';
@@ -29,8 +29,12 @@ import {
 const ROUTES = ['home', 'jobs', 'recruit', 'wallet', 'studio'];
 const DEFAULT_ROUTE = 'home';
 
+/**
+ * Routes are plain `#jobs` hashes. A leading slash from older links is still
+ * accepted, and some embedding contexts only propagate `#name` form.
+ */
 function routeFromHash() {
-  const raw = location.hash.replace(/^#\/?/, '').split('?')[0].trim();
+  const raw = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split(/[?&]/)[0].trim();
   return ROUTES.includes(raw) ? raw : DEFAULT_ROUTE;
 }
 
@@ -78,8 +82,13 @@ const actions = {
     }
     store.set({ route: next });
     if (push) {
-      const target = `#/${next}`;
-      if (location.hash !== target) { history.pushState(null, '', target); }
+      const target = `#${next}`;
+      if (location.hash !== target) {
+        // replaceState/pushState can be refused in sandboxed frames; the hash
+        // assignment below is the fallback that always works.
+        try { history.pushState(null, '', target); }
+        catch { location.hash = next; }
+      }
     }
     paintRoute();
   },
@@ -336,7 +345,7 @@ async function registerServiceWorker() {
 
 function navLink(route, key) {
   return h('a.nav-link', {
-    href: `#/${route}`, dataset: { route },
+    href: `#${route}`, dataset: { route },
     'aria-current': store.get().route === route ? 'page' : null,
     text: t(key),
     on: { click: (e) => { e.preventDefault(); actions.go(route); } },
@@ -345,7 +354,7 @@ function navLink(route, key) {
 
 function tabLink(route, key, iconName) {
   return h('a.tab', {
-    href: `#/${route}`, dataset: { route },
+    href: `#${route}`, dataset: { route },
     'aria-current': store.get().route === route ? 'page' : null,
     on: { click: (e) => { e.preventDefault(); actions.go(route); } },
   }, [icon(iconName), h('span', { text: t(key) })]);
@@ -402,7 +411,7 @@ function buildNav() {
 
   return h('header.nav.glass', { id: 'navbar' }, h('div.shell.nav-inner', null, [
     h('a.brand', {
-      href: '#/home', 'aria-label': t('app.name'),
+      href: '#home', 'aria-label': t('app.name'),
       on: { click: (e) => { e.preventDefault(); actions.go('home'); } },
     }, [
       h('span.brand-mark', { text: 'G', 'aria-hidden': 'true' }),
@@ -468,6 +477,7 @@ function buildNav() {
       }, h('img.avatar', {
         src: ME.avatar, alt: '', width: '38', height: '38',
         style: 'width:38px;height:38px', loading: 'lazy', decoding: 'async',
+        on: { error: (e) => paintImageFallback(e.currentTarget, ME.name) },
       })),
     ]),
   ]));

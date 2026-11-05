@@ -19,9 +19,9 @@
     { "src": "./assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Offres d'emploi", "short_name": "Emplois", "url": "./index.html#/jobs" },
-    { "name": "Recruter", "short_name": "Recruter", "url": "./index.html#/recruit" },
-    { "name": "Portefeuille Taro", "short_name": "Wallet", "url": "./index.html#/wallet" },
-    { "name": "Studio Live", "short_name": "Studio", "url": "./index.html#/studio" }
+    { "name": "Offres d'emploi", "short_name": "Emplois", "url": "./index.html#jobs" },
+    { "name": "Recruter", "short_name": "Recruter", "url": "./index.html#recruit" },
+    { "name": "Portefeuille Taro", "short_name": "Wallet", "url": "./index.html#wallet" },
+    { "name": "Studio Live", "short_name": "Studio", "url": "./index.html#studio" }
   ]
 }

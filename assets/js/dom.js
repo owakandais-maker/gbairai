@@ -205,3 +205,35 @@ export function countTo(el, target, { duration = 900, format = (v) => String(v) 
   };
   requestAnimationFrame(step);
 }
+
+/** Stable 32-bit hash of a string — same input always gives the same colour. */
+export function hashString(value) {
+  let hash = 2166136261;
+  const text = String(value || '');
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash);
+}
+
+/**
+ * Turn a failed <img> into a designed gradient tile instead of a blank box or a
+ * broken-image glyph. Keeps layout intact when images are slow, blocked by a
+ * content policy, or unavailable offline.
+ */
+const BLANK_PIXEL =
+  'data:image/svg+xml,%3Csvg xmlns=%22http%3A//www.w3.org/2000/svg%22 width=%221%22 height=%221%22%3E%3C/svg%3E';
+
+export function paintImageFallback(el, seed) {
+  if (el.dataset.fallback === 'true') return;
+  const hue = hashString(seed || el.currentSrc || el.src || 'gbairai') % 360;
+  el.dataset.fallback = 'true';
+  // A transparent 1×1 keeps the element a valid image, so the browser draws no
+  // broken-image glyph over the gradient.
+  el.src = BLANK_PIXEL;
+  el.style.background =
+    `linear-gradient(135deg, hsl(${hue} 62% 58%), hsl(${(hue + 48) % 360} 64% 44%))`;
+  el.style.visibility = 'visible';
+  el.style.objectFit = 'cover';
+}

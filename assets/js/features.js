@@ -3,7 +3,7 @@
  * (video pitch, job offer, ad campaign) with real client-side validation.
  */
 
-import { h, icon, render, $, safeUrl, debounce } from './dom.js';
+import { h, icon, render, $, safeUrl, debounce, paintImageFallback } from './dom.js';
 import { t, clock, getLocale, LOCALES } from './i18n.js';
 import * as store from './store.js';
 import { modal, toast, confirm } from './ui.js';
@@ -317,7 +317,11 @@ export function mountAdStage(host, { onManage }) {
             src: url, autoplay: true, muted: true, loop: true, playsinline: true,
             'aria-hidden': 'true', preload: 'metadata',
           })
-        : h('img.ad-media', { src: url, alt: ad.title || '', loading: i === 0 ? 'eager' : 'lazy', decoding: 'async' });
+        : h('img.ad-media', {
+            src: url, alt: ad.title || '',
+            loading: i === 0 ? 'eager' : 'lazy', decoding: 'async',
+            on: { error: (e) => paintImageFallback(e.currentTarget, ad.title || url) },
+          });
 
     const actions = [
       ...(safeUrl(ad.link) ? [h('a.btn.btn-on-dark', {

@@ -144,5 +144,9 @@ thèmes, le clavier seul, le rechargement hors ligne et la persistance.
 - La traduction du chat est une **simulation** : elle étiquette la langue cible
   sans traduire, en attendant un service réel. C'est explicite dans le code.
 - Les images de démonstration proviennent d'Unsplash et nécessitent le réseau
-  au premier affichage ; elles sont ensuite servies depuis le cache.
+  au premier affichage ; elles sont ensuite servies depuis le cache. Si une
+  image est indisponible (réseau coupé, politique de sécurité restrictive), une
+  tuile dégradée déterministe prend sa place : la mise en page reste intacte.
+- Le routage utilise des ancres simples (`#jobs`, `#wallet`…), compatibles avec
+  les environnements embarqués qui ne propagent pas les chemins.
 - Mode créateur : bouton couronne dans la barre, ou `?creator=1` dans l'URL.

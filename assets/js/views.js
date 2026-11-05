@@ -3,7 +3,7 @@
  * Every node comes from `h()`, so record text is never parsed as HTML.
  */
 
-import { h, icon, render, safeUrl, countTo, observeReveals } from './dom.js';
+import { h, icon, render, safeUrl, countTo, observeReveals, paintImageFallback } from './dom.js';
 import { t, num, ago, getLocale } from './i18n.js';
 import * as store from './store.js';
 import {
@@ -28,7 +28,7 @@ function img(src, alt, { className = '', eager = false } = {}) {
     decoding: 'async',
     ...(eager ? { fetchpriority: 'high' } : {}),
     on: {
-      error: (e) => { e.currentTarget.style.visibility = 'hidden'; },
+      error: (e) => paintImageFallback(e.currentTarget, alt || src),
     },
   });
 }
