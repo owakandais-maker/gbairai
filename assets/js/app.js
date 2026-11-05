@@ -71,6 +71,13 @@ router.on('/404', (ctx, host) => MiscView.renderNotFound(ctx, host));
 
 /* -------------------------------- barre haute --------------------------- */
 
+let topRefs = null;
+
+/**
+ * La barre du haut est construite une seule fois. Les navigations suivantes
+ * ne font que rafraîchir les pastilles : le globe n'est jamais détruit ni
+ * recréé, ce qui supprime le clignotement et la dépense inutile.
+ */
 function buildTopbar() {
   const bar = $('#topbar');
   if (!bar) return;
@@ -81,15 +88,16 @@ function buildTopbar() {
     type: 'button',
     'aria-label': t('nav.menu'),
     'aria-expanded': 'false',
-    title: t('nav.menu') + ' · ' + clockGMT(),
+    title: t('nav.menu'),
     onclick: toggleMenu,
   }, canvas, timeEl);
 
   if (globeHandle) globeHandle.destroy();
   globeHandle = createGlobe(canvas, { size: 50, timeEl });
 
-  const unread = (store.data().notifications || []).filter((n) => !n.read).length;
-  const cart = (store.data().cart || []).reduce((n, l) => n + l.qty, 0);
+  const bell = h('a.icon-btn', { href: '#/notifications', 'aria-label': t('nav.notifications'), title: t('nav.notifications') }, icon('bell'));
+  const cartBtn = h('a.icon-btn.hide-sm', { href: '#/shop?tab=cart', 'aria-label': t('shop.cart'), title: t('shop.cart') }, icon('cart'));
+  const meLink = h('a', { href: '#/me', 'aria-label': t('nav.profile'), title: t('nav.profile') }, avatar(store.me(), 34));
 
   mount(bar,
     h('div.brand', globeBtn,
@@ -98,17 +106,28 @@ function buildTopbar() {
     h('div.zone-title', { 'aria-hidden': 'true' }, t('app.zone')),
     h('div.row.gap-1',
       h('a.icon-btn', { href: '#/search', 'aria-label': t('a.search'), title: t('a.search') }, icon('search')),
-      h('a.icon-btn', {
-        href: '#/notifications', 'aria-label': t('nav.notifications'), title: t('nav.notifications'),
-        class: unread ? 'on' : '',
-      }, icon('bell')),
-      h('a.icon-btn.hide-sm', {
-        href: '#/shop?tab=cart', 'aria-label': t('shop.cart'), title: t('shop.cart'),
-        class: cart ? 'on' : '',
-      }, icon('cart')),
-      h('a', { href: '#/me', 'aria-label': t('nav.profile'), title: t('nav.profile') }, avatar(store.me(), 34)),
+      bell, cartBtn, meLink,
     ),
   );
+  topRefs = { bell, cart: cartBtn, me: meLink, avatarKey: null };
+  updateTopbar();
+}
+
+/** Rafraîchissement léger : pastilles et portrait, rien d'autre. */
+function updateTopbar() {
+  if (!topRefs) return;
+  const unread = (store.data().notifications || []).filter((n) => !n.read).length;
+  const cart = (store.data().cart || []).reduce((n, l) => n + l.qty, 0);
+  topRefs.bell.classList.toggle('on', unread > 0);
+  topRefs.bell.title = t('nav.notifications') + (unread ? ' · ' + unread : '');
+  topRefs.cart.classList.toggle('on', cart > 0);
+  topRefs.cart.title = t('shop.cart') + (cart ? ' · ' + cart : '');
+  const me = store.me();
+  const key = (me && (me.avatar || '')) + '|' + (me && me.name) + '|' + (me && me.avatarShape);
+  if (key !== topRefs.avatarKey) {
+    topRefs.avatarKey = key;
+    mount(topRefs.me, avatar(me, 34));
+  }
 }
 
 /* ------------------------- menu d'options (globe) ----------------------- */
@@ -199,10 +218,12 @@ function toggleMenu() {
 
 /* -------------------------------- barre basse --------------------------- */
 
+let tabRefs = null;
+
+/** Même principe pour la barre du bas : construite une fois, mise à jour ensuite. */
 function buildTabbar() {
   const bar = $('#tabbar');
   if (!bar) return;
-  const here = (router.ctx() || {}).hash || '#/';
   const items = [
     { hash: '#/', label: t('nav.home'), icon: 'home' },
     { hash: '#/shorts', label: t('nav.shorts'), icon: 'shorts' },
@@ -210,18 +231,29 @@ function buildTabbar() {
     { hash: '#/live', label: t('nav.live'), icon: 'video' },
     { hash: '#/messages', label: t('nav.messages'), icon: 'comment' },
   ];
-  mount(bar, items.map((it) => {
+  const nodes = items.map((it) => {
     if (it.compose) {
       return h('a.compose', {
         href: '#', 'aria-label': it.label,
         onclick: (e) => { e.preventDefault(); createSheet(); },
       }, icon(it.icon), h('span', it.label));
     }
+    return h('a', { href: it.hash, 'aria-label': it.label }, icon(it.icon), h('span', it.label));
+  });
+  mount(bar, nodes);
+  tabRefs = items.map((it, i) => ({ it, node: nodes[i] }));
+  updateTabbar();
+}
+
+function updateTabbar() {
+  if (!tabRefs) return;
+  const here = (router.ctx() || {}).hash || '#/';
+  for (const { it, node } of tabRefs) {
+    if (it.compose) continue;
     const active = it.hash === '#/' ? (here === '#/' || here === '') : here.startsWith(it.hash);
-    return h('a', {
-      href: it.hash, 'aria-current': active ? 'page' : null, 'aria-label': it.label,
-    }, icon(it.icon), h('span', it.label));
-  }));
+    if (active) node.setAttribute('aria-current', 'page');
+    else node.removeAttribute('aria-current');
+  }
 }
 
 function createSheet() {
@@ -306,10 +338,59 @@ router.setRenderer((ctx, handler) => {
     }
   }
 
-  buildTopbar();
-  buildTabbar();
+  if (needsVideo(ctx.path)) startDemoMedia();
+  updateTopbar();
+  updateTabbar();
+  // Une courte transition rend le changement de vue lisible au lieu d'un saut.
+  view.classList.remove('view-enter');
+  void view.offsetWidth;
+  view.classList.add('view-enter');
   document.title = titleFor(ctx) + ' — ' + t('app.name');
 });
+
+/* --------------------- vidéos de démonstration, à la demande ------------ */
+
+let demoStarted = false;
+
+function needsVideo(path) {
+  return path === '/shorts' || path === '/live' || path === '/live/studio'
+    || path === '/explore' || path === '/sound';
+}
+
+function whenIdle(fn, delay) {
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: delay || 4000 });
+  else setTimeout(fn, delay || 2500);
+}
+
+/** Vrai seulement si rien n'est ouvert par-dessus la vue. */
+function canRefresh() {
+  const modal = $('#modal-root');
+  const sheetRoot = $('#sheet-root');
+  const agentRoot = $('#agent-root');
+  const sb = $('#sidebar');
+  if (modal && modal.classList.contains('on')) return false;
+  if (sheetRoot && sheetRoot.classList.contains('on')) return false;
+  if (agentRoot && agentRoot.classList.contains('on')) return false;
+  if (sb && !sb.hidden) return false;
+  if (document.querySelector('.search-overlay, .pr-panel, .sh-search, .lightbox, .st-viewer, .call')) return false;
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return false;
+  return true;
+}
+
+function startDemoMedia() {
+  if (demoStarted) return;
+  demoStarted = true;
+  ensureDemoMedia().then(() => {
+    const p = (router.ctx() || {}).path;
+    // Les shorts se raccrochent tout seuls au média. Ailleurs on rafraîchit,
+    // mais jamais pendant qu'un panneau, une feuille ou le menu sont ouverts :
+    // la vue ne doit pas se reconstruire sous les doigts.
+    if (p === '/shorts') return;
+    if (!canRefresh()) return;
+    if (needsVideo(p) || p === '/') router.render();
+  }).catch(() => { /* repli : affiche fixe générée */ });
+}
 
 /** Arrête et détache tous les médias d'un conteneur avant de le remplacer. */
 function releaseMedia(root) {
@@ -346,9 +427,12 @@ function titleFor(ctx) {
 store.subscribe((label) => {
   if (label === 'settings') { applySettings(); }
   if (label === 'settings' || label === 'import' || label === 'reset') {
+    // Les libellés changent avec la langue : on reconstruit les deux barres.
     buildTopbar();
     buildTabbar();
     agent.refreshFab();
+  } else {
+    updateTopbar();
   }
 });
 
@@ -417,14 +501,15 @@ async function boot() {
 
   router.start();
 
-  await warmMedia();
-  router.render();
+  // Les visuels se complètent tout seuls dès que leur fichier est lu : on ne
+  // retarde donc pas le premier affichage pour les attendre.
+  warmMedia().catch(() => { /* sans conséquence */ });
 
-  // Vidéos de démonstration réelles, pour que le lecteur ait de la matière.
-  ensureDemoMedia().then(() => {
-    const p = (router.ctx() || {}).path;
-    if (p === '/shorts' || p === '/' || p === '/explore' || p === '/live') router.render();
-  }).catch(() => { /* repli affiche fixe */ });
+  // Les vidéos de démonstration sont encodées par le navigateur. C'est le
+  // travail le plus lourd de l'application : on ne le lance qu'une fois la
+  // page posée, et en priorité quand une vue en a réellement besoin.
+  if (needsVideo((router.ctx() || {}).path)) startDemoMedia();
+  else whenIdle(startDemoMedia, 3000);
 
   // Service worker : fonctionnement hors ligne. Inutile dans un cadre
   // intégré, où il est de toute façon refusé.
@@ -435,8 +520,32 @@ async function boot() {
   }
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
-else boot();
+/** Si le démarrage échoue, on le dit à l'écran plutôt que de laisser l'attente. */
+function bootFailed(err) {
+  console.error('[gbzn] démarrage impossible', err);
+  const view = document.querySelector('#view');
+  if (!view) return;
+  view.innerHTML = '';
+  const box = document.createElement('div');
+  box.style.cssText = 'display:grid;gap:14px;justify-items:center;text-align:center;padding:56px 20px';
+  const title = document.createElement('h1');
+  title.textContent = 'GBAIRAI ZONE n\u2019a pas pu démarrer';
+  const msg = document.createElement('p');
+  msg.style.cssText = 'color:#a7b0c8;max-width:52ch';
+  msg.textContent = String((err && err.message) || err || 'Erreur inconnue');
+  const btn = document.createElement('button');
+  btn.textContent = 'Réessayer';
+  btn.style.cssText = 'min-height:42px;padding:0 20px;border-radius:999px;border:0;'
+    + 'background:#6c5cff;color:#fff;font-weight:600;cursor:pointer';
+  btn.onclick = () => location.reload();
+  box.appendChild(title); box.appendChild(msg); box.appendChild(btn);
+  view.appendChild(box);
+}
+
+function startApp() { Promise.resolve().then(boot).catch(bootFailed); }
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startApp, { once: true });
+else startApp();
 
 /* --------------------- actions supplémentaires d'OWAK ------------------- */
 

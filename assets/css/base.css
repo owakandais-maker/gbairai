@@ -118,6 +118,33 @@ dialog { border: 0; padding: 0; background: none; }
    conteneur souple s'étire jusqu'à occuper toute la place. */
 .ic { width: 20px; height: 20px; flex: none; }
 
+/* ---------------------------- fluidité ---------------------------------- */
+
+/* Transition de vue : le changement se lit au lieu de sauter. */
+@keyframes view-in { from { opacity: 0; transform: translateY(7px) } to { opacity: 1; transform: none } }
+.view-enter { animation: view-in 200ms var(--ease) both; }
+
+html { scroll-behavior: smooth; }
+:root[data-motion="reduced"] html { scroll-behavior: auto; }
+
+/* Pas de surlignage gris au toucher, et pas de délai de 300 ms. */
+* { -webkit-tap-highlight-color: transparent; }
+a, button, summary, label, input, select, textarea { touch-action: manipulation; }
+
+/* Les zones défilantes gardent leur inertie et ne tirent pas la page. */
+.msg-items, .chat-body, .s-res, .sh-rel, .viewers, .m-body, .pr-panel, .st-pane .bd,
+.lb-cmts, .tabs, .stories, .ed-stage {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Pas de content-visibility sur les cartes : la hauteur estimée fait sauter
+   la barre de défilement, ce qui coûte plus en confort que ça ne rapporte. */
+
+/* On prévient le navigateur de ce qui bouge, sans en abuser. */
+.modal, .ag-panel, .sb-nav, .pr-panel { will-change: transform, opacity; }
+.view-enter { will-change: transform, opacity; }
+
 .skip-link {
   position: fixed; inset-inline-start: 12px; top: -60px; z-index: 300;
   background: var(--accent); color: #fff; padding: 10px 16px; border-radius: var(--r-sm);

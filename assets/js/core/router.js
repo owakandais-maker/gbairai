@@ -204,8 +204,31 @@ export function render() {
 
 export function ctx() { return current; }
 
+/* ------------------------- interception des liens ----------------------- */
+
+/**
+ * Tous les liens internes passent par le routeur plutôt que par la barre
+ * d'adresse. L'application navigue donc de la même façon qu'elle soit ouverte
+ * seule, intégrée dans un cadre, ou servie depuis un fichier local — même là
+ * où le navigateur refuse d'écrire le hash.
+ */
+function bindLinks() {
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented) return;
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
+    const href = a.getAttribute('href');
+    if (!href || href.charAt(0) !== '#') return;
+    e.preventDefault();
+    if (href === '#' || href === '#!') return;
+    go(href);
+  });
+}
+
 export function start() {
   loadStack();
+  bindLinks();
   if (!location.hash) writeUrl('#/');
   window.addEventListener('hashchange', () => {
     virtual = null;

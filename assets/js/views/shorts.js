@@ -20,7 +20,7 @@ import { toast, avatar, empty, sheet, menu, copyLink, tabs as tabsCtl, switchCtl
 import { download, mediaEl, pickFile, toMedia, editMedia, fitStyle } from '../core/media.js';
 import { resolve as resolveBlob } from '../core/idb.js';
 import { viewHead, scopedSearch, storiesRail, commentsBlock, shareSheet, openRelated } from '../features/parts.js';
-import { demoRef, posterFor } from '../data/demoMedia.js';
+import { demoRef, posterFor, ensureDemoMedia } from '../data/demoMedia.js';
 import * as agent from '../features/agent.js';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
@@ -116,10 +116,13 @@ function shortCard(v, cardOpts = {}) {
   const au = store.user(v.userId);
   const el = h('section.short', { dataset: { short: v.id } });
 
-  const ref = v.ref || demoRef(v.demo);
+  // La référence du média peut ne pas encore exister au moment où la carte est
+  // construite : elle est résolue à l'affichage, donc la vue n'a jamais besoin
+  // d'être reconstruite sous les doigts de l'utilisateur.
+  const refNow = () => v.ref || demoRef(v.demo);
   let video = null;
   let srcLoaded = false;
-  if (ref) {
+  {
     // Élément créé sans source : le fichier n'est chargé qu'au moment où le
     // short arrive à l'écran. Rien à annuler quand on passe au suivant.
     video = h('video', {
@@ -141,11 +144,15 @@ function shortCard(v, cardOpts = {}) {
   }
   if (video) {
     el.appendChild(video);
-  } else {
+  }
+  {
     const poster = posterFor(v.demo);
-    el.appendChild(poster
+    const ph = poster
       ? h('img.sh-ph', { src: poster, alt: v.caption || '' })
-      : h('div.sh-ph', icon('film'), h('p.xs', v.caption || t('nav.shorts'))));
+      : h('div.sh-ph', icon('film'), h('p.xs', v.caption || t('nav.shorts')));
+    ph.style.position = 'absolute';
+    ph.style.inset = '0';
+    el.insertBefore(ph, el.firstChild);
   }
   el.appendChild(h('div.sh-shade'));
 
@@ -263,7 +270,7 @@ function shortCard(v, cardOpts = {}) {
       icon('share'), h('span.n', nfmt(v.shares || 0))),
     saveBtn,
     v.allowDownload !== false
-      ? h('button.a', { type: 'button', 'aria-label': t('a.download'), onclick: () => download(ref, 'short-' + v.id + '.webm') },
+      ? h('button.a', { type: 'button', 'aria-label': t('a.download'), onclick: () => download(refNow(), 'short-' + v.id + '.webm') },
         icon('download'), h('span.n', t('a.download')))
       : null,
     h('button.a', { type: 'button', 'aria-label': t('a.gift'), onclick: () => giftSheet(v) }, icon('gift'), h('span.n', t('a.gift'))),
@@ -346,7 +353,7 @@ function shortCard(v, cardOpts = {}) {
         ),
         h('div.pr-grp', h('span.lbl', t('a.download')),
           v.allowDownload !== false
-            ? h('button.btn.sm.soft.block', { type: 'button', onclick: () => download(ref, 'short-' + v.id + '.webm') }, icon('download'), t('shorts.download'))
+            ? h('button.btn.sm.soft.block', { type: 'button', onclick: () => download(refNow(), 'short-' + v.id + '.webm') }, icon('download'), t('shorts.download'))
             : h('p.xs', { style: { color: 'rgba(255,255,255,.6)' } }, t('shorts.downloadOff')),
         ),
       ),
@@ -368,13 +375,21 @@ function shortCard(v, cardOpts = {}) {
       if (activated) return;
       activated = true;
       if (video && !srcLoaded) {
-        srcLoaded = true;
-        video.preload = store.settings().dataSaver ? 'metadata' : 'auto';
-        resolveBlob(ref).then((url) => {
-          if (!url || !video.isConnected) return;
-          video.src = url;
-          if (store.settings().autoplay !== false) video.play().catch(() => { /* geste utilisateur requis */ });
-        });
+        const load = (ref) => {
+          if (!ref || srcLoaded) return;
+          srcLoaded = true;
+          video.preload = store.settings().dataSaver ? 'metadata' : 'auto';
+          resolveBlob(ref).then((url) => {
+            if (!url || !video.isConnected) return;
+            video.src = url;
+            if (store.settings().autoplay !== false) video.play().catch(() => { /* geste utilisateur requis */ });
+          });
+        };
+        const ready = refNow();
+        if (ready) load(ready);
+        // L'encodage des vidéos de démonstration est peut-être en cours :
+        // on se raccroche dessus sans reconstruire la vue.
+        else ensureDemoMedia().then(() => { if (el.isConnected) load(refNow()); }).catch(() => {});
       } else if (video && store.settings().autoplay !== false) {
         video.play().catch(() => { /* geste utilisateur requis */ });
       }

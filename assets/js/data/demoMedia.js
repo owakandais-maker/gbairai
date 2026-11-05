@@ -154,9 +154,16 @@ function record(id) {
     const t0 = performance.now();
     const total = r.secs * 1000;
     let raf = 0;
+    let lastPaint = -1000;
     const tick = () => {
-      const el = performance.now() - t0;
-      paint(cx, r, Math.min(1, el / total));
+      const now = performance.now();
+      const el = now - t0;
+      // Le flux est capturé à 25 images par seconde : repeindre plus souvent
+      // ne change rien au fichier et alourdit l'interface pendant l'encodage.
+      if (now - lastPaint >= 38) {
+        lastPaint = now;
+        paint(cx, r, Math.min(1, el / total));
+      }
       if (el < total) raf = requestAnimationFrame(tick);
       else {
         cancelAnimationFrame(raf);
@@ -197,7 +204,10 @@ export function ensureDemoMedia(opts = {}) {
     const made = {};
     // Encodage en parallèle : chaque recette a son canvas, donc quelques
     // secondes au total plutôt que la somme des durées.
-    await Promise.all(missing.map(async (id) => {
+    await Promise.all(missing.map(async (id, i) => {
+      // Démarrages décalés : les encodeurs ne se bousculent pas sur la même
+      // image, l'interface reste réactive pendant la fabrication.
+      await new Promise((r) => setTimeout(r, i * 160));
       let blob = null;
       try { blob = await record(id); } catch (e) { blob = null; }
       if (blob && blob.size > 1024) {
