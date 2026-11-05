@@ -1,179 +1,142 @@
-/**
- * Service worker — app shell precache + runtime strategies.
- *
- * - App shell (HTML/CSS/JS/manifest): stale-while-revalidate, so a new deploy
- *   is picked up on the next visit without ever blocking on the network.
- * - Fonts and icon CSS: cache-first with a long TTL.
- * - Remote images: cache-first, capped at 60 entries (LRU-ish trim).
- * - Everything else: network, falling back to cache, falling back to the shell.
- */
+/* ==========================================================================
+   sw.js — service worker de GBAIRAI ZONE
+   Coquille applicative mise en cache, réseau d'abord pour la navigation,
+   cache d'abord pour les ressources. Les polices distantes sont mises en
+   cache à la volée, et leur absence ne bloque jamais l'application.
+   ========================================================================== */
 
-const VERSION = 'v2.0.1';
-const SHELL = `gbairai-shell-${VERSION}`;
-const ASSETS = `gbairai-assets-${VERSION}`;
-const IMAGES = `gbairai-images-${VERSION}`;
-const MAX_IMAGES = 60;
+const VERSION = 'gbzn-v1';
+const SHELL = VERSION + '-shell';
+const RUNTIME = VERSION + '-runtime';
 
-const SHELL_URLS = [
+const SHELL_FILES = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/css/app.css',
+  './assets/css/base.css',
+  './assets/css/views.css',
   './assets/js/app.js',
-  './assets/js/dom.js',
-  './assets/js/store.js',
-  './assets/js/i18n.js',
-  './assets/js/data.js',
-  './assets/js/ui.js',
-  './assets/js/ai.js',
-  './assets/js/views.js',
-  './assets/js/features.js',
-  './assets/js/icons.js',
+  './assets/js/core/dom.js',
+  './assets/js/core/store.js',
+  './assets/js/core/router.js',
+  './assets/js/core/i18n.js',
+  './assets/js/core/icons.js',
+  './assets/js/core/ui.js',
+  './assets/js/core/media.js',
+  './assets/js/core/search.js',
+  './assets/js/core/actions.js',
+  './assets/js/core/idb.js',
+  './assets/js/data/seed.js',
+  './assets/js/data/world.js',
+  './assets/js/data/demoMedia.js',
+  './assets/js/features/globe.js',
+  './assets/js/features/agent.js',
+  './assets/js/features/parts.js',
+  './assets/js/views/home.js',
+  './assets/js/views/shorts.js',
+  './assets/js/views/profile.js',
+  './assets/js/views/messages.js',
+  './assets/js/views/live.js',
+  './assets/js/views/shop.js',
+  './assets/js/views/misc.js',
+  './assets/js/views/settings.js',
+  './assets/js/views/owner.js',
   './assets/icons/icon.svg',
-];
-
-/**
- * Cross-origin assets worth having before the first offline visit. Precached
- * here because the worker is not yet controlling the page during the very first
- * load, so the runtime handler never sees these requests.
- */
-const EXTERNAL_URLS = [
-  'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './assets/icons/icon-maskable.png',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(SHELL);
-    // addAll fails the whole install if any single URL 404s, so add individually.
-    await Promise.all(SHELL_URLS.map((url) =>
-      cache.add(new Request(url, { cache: 'reload' })).catch(() => null)));
-
-    const assets = await caches.open(ASSETS);
-    await Promise.all(EXTERNAL_URLS.map(async (url) => {
-      try {
-        // `no-cors` keeps this working for opaque font-CSS responses.
-        const res = await fetch(url, { mode: 'no-cors', cache: 'reload' });
-        if (res) await assets.put(url, res);
-      } catch { /* the app degrades to the system font stack */ }
+    // Un fichier manquant ne doit pas faire échouer l'installation entière.
+    await Promise.all(SHELL_FILES.map(async (url) => {
+      try { await cache.add(new Request(url, { cache: 'reload' })); }
+      catch (e) { /* ressource optionnelle */ }
     }));
-
-    await self.skipWaiting();
+    self.skipWaiting();
   })());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const keep = new Set([SHELL, ASSETS, IMAGES]);
-    const names = await caches.keys();
-    await Promise.all(names.filter((n) => !keep.has(n)).map((n) => caches.delete(n)));
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== SHELL && k !== RUNTIME).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data === 'skip-waiting') self.skipWaiting();
+  if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
-async function trim(cacheName, max) {
-  const cache = await caches.open(cacheName);
-  const keys = await cache.keys();
-  for (let i = 0; i < keys.length - max; i += 1) await cache.delete(keys[i]);
-}
-
-/**
- * A real Response, so a cache miss shows as a handled fallback rather than a
- * console network error. Images get a neutral placeholder tile so the layout
- * keeps its shape offline instead of showing broken-image glyphs.
- */
-const PLACEHOLDER_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9" width="16" height="9">' +
-  '<rect width="16" height="9" fill="#e9ebf0"/></svg>';
-
-function offlineResponse(request) {
-  if (request.destination === 'image') {
-    return new Response(PLACEHOLDER_SVG, {
-      status: 200,
-      headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' },
-    });
-  }
-  if (request.destination === 'style') {
-    // Valid, empty CSS: the browser falls back to the system font stack
-    // instead of logging an aborted stylesheet.
-    return new Response('/* offline */', {
-      status: 200,
-      headers: { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-store' },
-    });
-  }
-  return new Response('Offline', {
-    status: 504,
-    statusText: 'Offline',
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  });
-}
-
-async function staleWhileRevalidate(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  const network = fetch(request)
-    .then((res) => { if (res && res.ok) cache.put(request, res.clone()); return res; })
-    .catch(() => null);
-  return cached || (await network) || offlineResponse(request);
-}
-
-async function cacheFirst(request, cacheName, { max } = {}) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  try {
-    const res = await fetch(request);
-    // Opaque cross-origin responses still cache usefully for fonts/images.
-    if (res && (res.ok || res.type === 'opaque')) {
-      await cache.put(request, res.clone());
-      if (max) trim(cacheName, max);
-    }
-    return res;
-  } catch {
-    return cached || offlineResponse(request);
-  }
+function isShellRequest(url) {
+  return url.origin === self.location.origin;
 }
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method !== 'GET') return;
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  let url;
-  try { url = new URL(request.url); } catch { return; }
-  if (!/^https?:$/.test(url.protocol)) return;
-
-  const sameOrigin = url.origin === self.location.origin;
-
-  // Navigations: serve the shell so deep links work offline.
-  if (request.mode === 'navigate') {
+  // Navigation : on sert la coquille, l'application gère le routage par hash.
+  if (req.mode === 'navigate') {
     event.respondWith((async () => {
       try {
-        const res = await fetch(request);
+        const net = await fetch(req);
         const cache = await caches.open(SHELL);
-        cache.put('./index.html', res.clone());
-        return res;
-      } catch {
-        const cache = await caches.open(SHELL);
-        return (await cache.match('./index.html')) || (await cache.match('./')) || offlineResponse(request);
+        cache.put('./index.html', net.clone()).catch(() => {});
+        return net;
+      } catch (e) {
+        const cached = await caches.match('./index.html');
+        return cached || new Response('<h1>GBAIRAI ZONE</h1><p>Hors ligne.</p>', {
+          status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
       }
     })());
     return;
   }
 
-  if (sameOrigin) {
-    event.respondWith(staleWhileRevalidate(request, SHELL));
+  // Ressources locales : cache d'abord, réseau en secours.
+  if (isShellRequest(url)) {
+    event.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) {
+        // rafraîchissement discret en arrière-plan
+        fetch(req).then((net) => {
+          if (net && net.ok) caches.open(SHELL).then((c) => c.put(req, net.clone()).catch(() => {}));
+        }).catch(() => {});
+        return cached;
+      }
+      try {
+        const net = await fetch(req);
+        if (net && net.ok) {
+          const cache = await caches.open(SHELL);
+          cache.put(req, net.clone()).catch(() => {});
+        }
+        return net;
+      } catch (e) {
+        return new Response('', { status: 504, statusText: 'Hors ligne' });
+      }
+    })());
     return;
   }
 
-  if (/^fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
-    event.respondWith(cacheFirst(request, ASSETS));
-    return;
-  }
-
-  if (request.destination === 'image' || /\.(png|jpe?g|webp|avif|gif|svg)$/i.test(url.pathname)) {
-    event.respondWith(cacheFirst(request, IMAGES, { max: MAX_IMAGES }));
-  }
+  // Polices et ressources distantes : réseau puis cache, sans jamais bloquer.
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    try {
+      const net = await fetch(req);
+      if (net && (net.ok || net.type === 'opaque')) {
+        const cache = await caches.open(RUNTIME);
+        cache.put(req, net.clone()).catch(() => {});
+      }
+      return net;
+    } catch (e) {
+      return new Response('', { status: 504, statusText: 'Hors ligne' });
+    }
+  })());
 });

@@ -1,27 +1,28 @@
 {
-  "name": "GBAIRAI TRAVAIL — Le futur de l'emploi",
-  "short_name": "GBAIRAI",
-  "description": "Plateforme de recrutement par pitch vidéo : matching IA, portefeuille Taro, studio live et assistant vocal multilingue.",
+  "name": "GBAIRAI ZONE — le réseau social total",
+  "short_name": "GBZN",
+  "id": "/gbairai-zone/",
+  "description": "Fil, shorts, stories, studio live, boutique TARO, emploi, messagerie et appels, avec OWAK, l'agent IA unique qui pilote toute l'application.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser"],
   "orientation": "any",
-  "background_color": "#f6f7fb",
-  "theme_color": "#4f46e5",
+  "background_color": "#06080f",
+  "theme_color": "#06080f",
   "lang": "fr",
   "dir": "auto",
-  "categories": ["business", "productivity", "social"],
+  "categories": ["social", "entertainment", "shopping", "business"],
   "icons": [
-    { "src": "./assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "./assets/icons/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Offres d'emploi", "short_name": "Emplois", "url": "./index.html#jobs" },
-    { "name": "Recruter", "short_name": "Recruter", "url": "./index.html#recruit" },
-    { "name": "Portefeuille Taro", "short_name": "Wallet", "url": "./index.html#wallet" },
-    { "name": "Studio Live", "short_name": "Studio", "url": "./index.html#studio" }
+    { "name": "Shorts", "url": "./index.html#/shorts" },
+    { "name": "Boutique", "url": "./index.html#/shop" },
+    { "name": "Messages", "url": "./index.html#/messages" },
+    { "name": "Studio live", "url": "./index.html#/live" }
   ]
 }

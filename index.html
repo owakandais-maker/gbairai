@@ -1,87 +1,95 @@
 <!DOCTYPE html>
-<html lang="fr" dir="ltr" data-theme="light">
+<html lang="fr" dir="ltr" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GBAIRAI TRAVAIL — Le futur de l'emploi</title>
+<title>GBAIRAI ZONE — le réseau social total</title>
 
-<meta name="description" content="GBAIRAI TRAVAIL : la plateforme de recrutement par pitch vidéo. Matching IA, portefeuille Taro, studio live et assistant vocal multilingue.">
-<meta name="theme-color" content="#f6f7fb">
-<meta name="color-scheme" content="light dark">
-<meta name="application-name" content="GBAIRAI TRAVAIL">
+<meta name="description" content="GBAIRAI ZONE (GBZN) : fil, shorts, stories, studio live, boutique TARO, emploi, messagerie et appels, avec OWAK, l'agent IA unique qui pilote toute l'application.">
+<meta name="theme-color" content="#06080f">
+<meta name="color-scheme" content="dark light">
+<meta name="application-name" content="GBAIRAI ZONE">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="GBAIRAI">
+<meta name="apple-mobile-web-app-title" content="GBZN">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="GBAIRAI TRAVAIL">
-<meta property="og:title" content="GBAIRAI TRAVAIL — Le futur de l'emploi">
-<meta property="og:description" content="Trouvez le job qui matche votre vibe. Pitch vidéo, matching IA et assistant vocal en 7 langues.">
+<meta property="og:site_name" content="GBAIRAI ZONE">
+<meta property="og:title" content="GBAIRAI ZONE — le réseau social total">
+<meta property="og:description" content="Fil, shorts, stories, studio live, boutique TARO et OWAK, ton agent IA personnel.">
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./assets/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
 
-<!-- Fonts: preconnect then load without blocking first paint -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style"
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap">
 
-<!-- Icons are inline SVG (assets/js/icons.js) — no icon-font CDN. -->
-
-<link rel="stylesheet" href="./assets/css/app.css">
+<link rel="stylesheet" href="./assets/css/base.css">
+<link rel="stylesheet" href="./assets/css/views.css">
 
 <script>
-  /* Set the theme before first paint so there is no light flash in dark mode. */
+  /* Thème, langue et accessibilité appliqués avant le premier rendu : aucun flash. */
   (function () {
+    var r = document.documentElement;
+    function get(k, d) { try { var v = localStorage.getItem('gbzn.v1.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
     try {
-      var pref = JSON.parse(localStorage.getItem('gbairai.v2.theme') || '"system"');
-      var dark = pref === 'dark' ||
-        (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      var s = get('settings', {}) || {};
+      var pref = s.theme || 'dark';
+      var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+      r.dataset.theme = dark ? 'dark' : 'light';
       var tc = document.querySelector('meta[name="theme-color"]');
-      if (tc) tc.setAttribute('content', dark ? '#070b16' : '#f6f7fb');
-      var loc = JSON.parse(localStorage.getItem('gbairai.v2.locale') || 'null');
-      if (loc) {
-        document.documentElement.lang = loc;
-        document.documentElement.dir = loc === 'ar' ? 'rtl' : 'ltr';
-      }
-    } catch (e) { /* storage unavailable — defaults apply */ }
+      if (tc) tc.setAttribute('content', dark ? '#06080f' : '#f4f6fb');
+      var lang = s.locale || 'fr';
+      r.lang = lang;
+      r.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+      if (s.accent) r.style.setProperty('--accent', s.accent);
+      if (s.fontScale) r.style.setProperty('--font-scale', String(s.fontScale));
+      if (s.contrast) r.dataset.contrast = 'high';
+      if (s.reduceMotion) r.dataset.motion = 'reduced';
+      if (s.density) r.dataset.density = s.density;
+    } catch (e) { /* stockage indisponible : les valeurs par défaut s'appliquent */ }
   })();
 </script>
 </head>
 
 <body>
-  <a class="skip-link" href="#main" data-i18n="nav.skip">Aller au contenu principal</a>
+  <a class="skip-link" href="#view">Aller au contenu</a>
 
-  <!-- Nav, tab bar, dock and dock panels are built by app.js -->
-
-  <main id="main" class="main" tabindex="-1">
-    <div class="shell">
-      <div class="stack gap-6" style="padding-block:40px">
-        <div class="skeleton" style="height:42px;width:min(420px,80%)"></div>
-        <div class="skeleton" style="height:22px;width:min(560px,92%)"></div>
-        <div class="grid grid-cards">
-          <div class="skeleton" style="height:320px"></div>
-          <div class="skeleton" style="height:320px"></div>
-          <div class="skeleton" style="height:320px"></div>
+  <!-- Toute l'interface est construite par assets/js/app.js -->
+  <div id="app" class="app">
+    <header id="topbar" class="topbar"></header>
+    <aside id="sidebar" class="sidebar" hidden></aside>
+    <main id="main" class="main">
+      <div id="view" class="view" tabindex="-1">
+        <div class="boot">
+          <div class="boot-logo" aria-hidden="true"></div>
+          <p class="boot-t">GBAIRAI ZONE</p>
+          <div class="boot-bar"><span></span></div>
         </div>
       </div>
-    </div>
-  </main>
+      <aside id="rail" class="rail" hidden></aside>
+    </main>
+    <nav id="tabbar" class="tabbar"></nav>
+  </div>
+
+  <div id="modal-root" class="modal-root"></div>
+  <div id="sheet-root" class="sheet-root"></div>
+  <div id="agent-root" class="agent-root"></div>
+  <div id="toast-root" class="toast-root" role="status" aria-live="polite"></div>
 
   <noscript>
-    <div style="max-width:620px;margin:120px auto;padding:28px;text-align:center">
+    <div style="max-width:620px;margin:120px auto;padding:28px;text-align:center;color:#e7ebf5">
       <h1 style="font-size:1.4rem;margin-bottom:12px">JavaScript requis</h1>
-      <p style="color:#5b6477">
-        GBAIRAI TRAVAIL est une application interactive : activez JavaScript pour
-        parcourir les offres, les profils vidéo et le studio live.
-      </p>
+      <p>GBAIRAI ZONE est une application interactive : active JavaScript pour accéder au fil,
+         aux shorts, au studio live et à l'agent OWAK.</p>
     </div>
   </noscript>
 
